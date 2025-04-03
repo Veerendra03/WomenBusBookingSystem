@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'; // Added useRef for click-outside detection
+import React, { useState, useEffect, useRef } from 'react'; 
 import { Link } from 'react-router-dom';
 import { Bus, Calendar, MapPin, User, LogIn, UserPlus, Ticket, UserCog, ArrowRight, Menu, X } from 'lucide-react';
 import logo from '../assets/logo2.jpg';
@@ -100,11 +100,11 @@ const Landing = () => {
             </span>
             {isAccountOpen && (
               <div className="dropdown-menu">
-                <Link to="/login" className="dropdown-item" onClick={() => setIsSidebarOpen(false)}>
+                <Link to="/user" className="dropdown-item" onClick={() => setIsSidebarOpen(false)}>
                   <LogIn className="dropdown-icon" />
                   Login
                 </Link>
-                <Link to="/register" className="dropdown-item" onClick={() => setIsSidebarOpen(false)}>
+                <Link to="/user" className="dropdown-item" onClick={() => setIsSidebarOpen(false)}>
                   <UserPlus className="dropdown-icon" />
                   Signup
                 </Link>
@@ -188,7 +188,7 @@ const Landing = () => {
           </div>
           <div className="footer-admin">
             <h3>Admin</h3>
-            <Link to="/admin-login" className="footer-link">
+            <Link to="/admin" className="footer-link">
               <UserCog className="footer-icon" />
               Admin Login
             </Link>
