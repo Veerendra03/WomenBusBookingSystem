@@ -1,0 +1,570 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Josefin+Sans:wght@300;400;700&display=swap');
+
+/* General container styling */
+.user-home {
+  font-family: 'Josefin Sans', sans-serif;
+  color: #333;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: calc(100vh - 100px); /* Adjust based on header/footer height */
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Headings */
+.user-home h1,
+.user-home h2,
+.user-home h3 {
+  font-family: 'Lilita One', sans-serif;
+}
+
+.user-home h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #264d68;
+  font-size: 2.5rem;
+}
+
+.user-home h2 {
+  margin-top: 30px;
+  margin-bottom: 15px;
+  color: #264d68;
+  font-size: 2rem;
+}
+
+/* Form styling */
+.user-home form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.user-home form div {
+  flex: 1;
+  min-width: 200px;
+}
+
+.user-home form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #264d68;
+  font-family: 'Josefin Sans', sans-serif;
+}
+
+.user-home form input,
+.user-home form select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.user-home form input:focus,
+.user-home form select:focus {
+  border-color: #00a0b0;
+  outline: none;
+}
+
+.user-home form button {
+  padding: 10px 25px;
+  background-color: #00a0b0;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.user-home form button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.user-home form button:hover:not(:disabled) {
+  background-color: #264d68;
+  transform: scale(1.05);
+}
+
+/* Bus Card styling */
+.bus-card {
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  background-color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 1s ease-out forwards;
+}
+
+.bus-card h3 {
+  margin: 0 0 10px;
+  color: #264d68;
+  font-size: 1.6rem;
+}
+
+.bus-card p {
+  margin: 5px 0;
+  color: #555;
+  font-size: 1.1rem;
+}
+
+/* Passenger Details styling */
+.passenger-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #eee;
+  padding: 10px;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  animation: fadeIn 1s ease-out forwards;
+}
+
+.passenger-details input,
+.passenger-details select {
+  flex: 1;
+  min-width: 150px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.passenger-details input:focus,
+.passenger-details select:focus {
+  border-color: #00a0b0;
+  outline: none;
+}
+
+.passenger-details button {
+  padding: 5px 10px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.passenger-details button:hover {
+  background-color: #c82333;
+}
+
+/* Seat Selection styling */
+.seat-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.seat-selection button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 1rem;
+}
+
+.seat-selection button:disabled {
+  background-color: #ffcccc;
+  cursor: not-allowed;
+}
+
+.seat-selection button.selected {
+  background-color: #00a0b0;
+  color: white;
+  border-color: #00a0b0;
+}
+
+.seat-selection button:hover:not(:disabled) {
+  background-color: #e0e0e0;
+  transform: scale(1.05);
+}
+
+/* Table styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background-color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 1s ease-out forwards;
+}
+
+table th,
+table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: left;
+  color: #333;
+  font-size: 1rem;
+}
+
+table th {
+  background-color: #f4f4f4;
+  font-weight: bold;
+  color: #264d68;
+}
+
+table button {
+  padding: 5px 10px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+table button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+table button:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+/* Error styling */
+.error {
+  color: #721c24;
+  margin-bottom: 15px;
+  text-align: center;
+  font-weight: bold;
+  background-color: #f8d7da;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+/* Payment Popup Styles */
+.payment-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.payment-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  width: 300px;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.payment-content h3 {
+  margin: 0 0 15px;
+  color: #264d68;
+  font-size: 1.6rem;
+}
+
+.payment-content p {
+  margin: 0 0 20px;
+  color: #555;
+  font-size: 1.1rem;
+}
+
+.payment-content button {
+  padding: 10px 20px;
+  margin: 0 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: bold;
+}
+
+.payment-content button:first-child {
+  background-color: #28a745;
+  color: white;
+}
+
+.payment-content button:first-child:hover {
+  background-color: #218838;
+  transform: scale(1.05);
+}
+
+.payment-content button:last-child {
+  background-color: #dc3545;
+  color: white;
+}
+
+.payment-content button:last-child:hover {
+  background-color: #c82333;
+  transform: scale(1.05);
+}
+
+/* Payment Status Styles */
+.payment-status {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  z-index: 1000;
+  font-size: 1.2rem;
+  font-weight: bold;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.payment-status.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 2px solid #c3e6cb;
+}
+
+.payment-status.failure {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 2px solid #f5c6cb;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .user-home {
+    padding: 15px;
+  }
+
+  .user-home h1 {
+    font-size: 2rem;
+  }
+
+  .user-home h2 {
+    font-size: 1.8rem;
+  }
+
+  .user-home form {
+    padding: 15px;
+    gap: 12px;
+  }
+
+  .user-home form div {
+    min-width: 180px;
+  }
+
+  .user-home form input,
+  .user-home form select {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+
+  .user-home form button {
+    padding: 8px 20px;
+    font-size: 0.9rem;
+  }
+
+  .bus-card {
+    padding: 12px;
+  }
+
+  .bus-card h3 {
+    font-size: 1.4rem;
+  }
+
+  .bus-card p {
+    font-size: 1rem;
+  }
+
+  .passenger-details {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .passenger-details input,
+  .passenger-details select {
+    min-width: 140px;
+    padding: 6px;
+    font-size: 0.9rem;
+  }
+
+  .seat-selection button {
+    width: 35px;
+    height: 35px;
+    font-size: 0.9rem;
+  }
+
+  table th,
+  table td {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+
+  table button {
+    padding: 4px 8px;
+  }
+
+  .payment-content {
+    width: 250px;
+  }
+
+  .payment-content h3 {
+    font-size: 1.4rem;
+  }
+
+  .payment-content p {
+    font-size: 1rem;
+  }
+
+  .payment-content button {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+  }
+
+  .payment-status {
+    font-size: 1rem;
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-home {
+    padding: 10px;
+  }
+
+  .user-home h1 {
+    font-size: 1.6rem;
+  }
+
+  .user-home h2 {
+    font-size: 1.5rem;
+  }
+
+  .user-home form {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .user-home form div {
+    min-width: 160px;
+  }
+
+  .user-home form input,
+  .user-home form select {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+
+  .user-home form button {
+    padding: 6px 15px;
+    font-size: 0.8rem;
+  }
+
+  .bus-card {
+    padding: 10px;
+  }
+
+  .bus-card h3 {
+    font-size: 1.2rem;
+  }
+
+  .bus-card p {
+    font-size: 0.9rem;
+  }
+
+  .passenger-details {
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .passenger-details input,
+  .passenger-details select {
+    min-width: 130px;
+    padding: 5px;
+    font-size: 0.8rem;
+  }
+
+  .seat-selection button {
+    width: 30px;
+    height: 30px;
+    font-size: 0.8rem;
+  }
+
+  table th,
+  table td {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+
+  table button {
+    padding: 3px 6px;
+  }
+
+  .payment-content {
+    width: 200px;
+  }
+
+  .payment-content h3 {
+    font-size: 1.2rem;
+  }
+
+  .payment-content p {
+    font-size: 0.9rem;
+  }
+
+  .payment-content button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .payment-status {
+    font-size: 0.9rem;
+    padding: 12px;
+  }
+}

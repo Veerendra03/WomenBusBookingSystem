@@ -1,7 +1,7 @@
 import {BrowserRouter, Routes, Route} from 'react-router-dom';
 import Landing from './pages/Landing';
 import Admin from './pages/Admin';
-import Adminhome from './pages/AdminHome';
+import Adminhome from './pages/Adminhome';
 import Users from './pages/User';
 import Userhome from './pages/Userhome';
 function App(){
