@@ -670,76 +670,181 @@ p {
 
 @media (max-width: 400px) {
   .auth-header {
-    padding: 6px 10px;
+    padding: 8px 12px;
+    background: linear-gradient(90deg, #264d68, #00a0b0);
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   }
 
   .auth-logo {
-    width: 70px;
-    height: 70px;
+    width: 80px;
+    height: 80px;
+    border: 3px solid #fff;
+    animation: bounceIn 1s ease-out;
   }
 
   .auth-logo.animate-circle::after {
-    width: 70px;
-    height: 70px;
+    width: 80px;
+    height: 80px;
+    animation: circlePulse 2s infinite;
   }
 
   .auth-header .app-name {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
   }
 
   .auth-toggle {
-    padding: 6px 0;
+    padding: 8px 0;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   }
 
   .toggle-btn {
-    padding: 5px 12px;
-    font-size: 0.9rem;
-    margin: 0 3px 3px;
+    padding: 6px 15px;
+    font-size: 1rem;
+    margin: 0 5px 5px;
+    background: linear-gradient(90deg, #00a0b0, #264d68);
+    color: white;
+    border-radius: 6px;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+  }
+
+  .toggle-btn:hover {
+    transform: scale(1.1);
+    background-color: #007a8c;
   }
 
   .auth-content {
-    padding: 15px 5px;
-    min-height: 400px;
+    padding: 20px 10px;
+    min-height: 450px;
+    background: linear-gradient(135deg, #e0f7fa, #ffffff);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   .auth-image {
-    height: 120px;
+    height: 140px;
+    border-radius: 8px;
+    animation: fadeIn 1s ease-out;
   }
 
   .form-wrapper {
-    padding: 15px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   .form-wrapper h2 {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
+    color: #264d68;
+    text-align: center;
+    margin-bottom: 15px;
+    animation: slideInLeft 0.5s ease-out;
   }
 
   .input-group {
-    padding: 5px 6px;
-    margin-bottom: 6px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .input-group:focus-within {
+    border-color: #00a0b0;
+    box-shadow: 0 0 8px rgba(0, 160, 176, 0.4);
   }
 
   .input-group input,
   .input-group select {
-    padding: 4px;
-    font-size: 0.8rem;
+    padding: 6px;
+    font-size: 0.9rem;
+    border: none;
+    outline: none;
+    width: 100%;
+    background: transparent;
   }
 
   .auth-btn {
-    padding: 7px 15px;
-    font-size: 0.85rem;
+    padding: 10px 20px;
+    font-size: 1rem;
+    background: linear-gradient(90deg, #264d68, #00a0b0);
+    color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .auth-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
   }
 
   .auth-link {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
+    color: #00a0b0;
+    text-align: center;
+    margin-top: 10px;
+    transition: color 0.3s ease;
+  }
+
+  .auth-link:hover {
+    color: #264d68;
   }
 
   .auth-footer {
-    padding: 8px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1);
   }
 
   .auth-back-btn {
-    padding: 5px 12px;
-    font-size: 0.8rem;
+    padding: 8px 15px;
+    font-size: 0.9rem;
+    background: linear-gradient(90deg, #00a0b0, #264d68);
+    color: white;
+    border-radius: 6px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .auth-back-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Keyframes for animations */
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes circlePulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
   }
 }

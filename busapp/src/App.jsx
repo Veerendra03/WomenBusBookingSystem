@@ -4,6 +4,7 @@ import Admin from './pages/Admin';
 import Adminhome from './pages/Adminhome';
 import Users from './pages/User';
 import Userhome from './pages/Userhome';
+import 'react-toastify/dist/ReactToastify.css';
 function App(){
   return (
     <>
