@@ -102,7 +102,7 @@ function Admin() {
 
       localStorage.setItem('token', response.data.token);
       showToastNotification(response.data.message);
-      navigate('/admin-dashboard', { replace: true });
+      navigate('/admin', { replace: true });
     } catch (error) {
       showToastNotification(error.response?.data?.message || 'Error during signup');
       console.error('Signup error:', error.response || error);
