@@ -1,12 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  ActivityIndicator,
+  Animated,
+  RefreshControl,
+  SafeAreaView,
+  Platform,
+  KeyboardAvoidingView,
+  Switch,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
-import { ToastContainer, toast } from 'react-toastify';
-import { motion } from 'framer-motion';
-import sideImage from '../assets/background.jpg'; // Adjust the path to your image
-import '../styles/Adminhome.css';
+import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import styles from '../styles/AdminhomeStyles';
 
-function Adminhome() {
+const API_URL = Constants.expoConfig?.extra?.apiUrl;
+
+const Adminhome = () => {
+  const navigation = useNavigation();
   const [admin, setAdmin] = useState(null);
   const [agencyDetails, setAgencyDetails] = useState({
     agencyName: '',
@@ -24,34 +43,54 @@ function Adminhome() {
   });
   const [buses, setBuses] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [selectedBus, setSelectedBus] = useState(null); // State to track selected bus
+  const [selectedBus, setSelectedBus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true); // Add initial loading state
   const [error, setError] = useState('');
-  const [imageFiles, setImageFiles] = useState([]);
+  const [imageUris, setImageUris] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  // Animation states
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(100)).current;
+  const cardScaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUsername = localStorage.getItem('username');
-    if (token) {
+    const initialize = async () => {
       try {
-        const decoded = jwtDecode(token);
-        setAdmin({ ...decoded, username: storedUsername || decoded.username || 'Admin' });
-        fetchAdminProfile();
-        fetchBuses();
-        fetchBookings();
+        const token = await AsyncStorage.getItem('token');
+        const storedUsername = await AsyncStorage.getItem('username');
+        if (token) {
+          const decoded = jwtDecode(token);
+          const currentTime = Math.floor(Date.now() / 1000);
+          if (decoded.exp < currentTime) {
+            throw new Error('Token expired');
+          }
+          setAdmin({ ...decoded, username: storedUsername || decoded.username || 'Admin' });
+          await Promise.all([fetchAdminProfile(), fetchBuses(), fetchBookings()]);
+        } else {
+          navigation.navigate('Admin');
+        }
       } catch (err) {
-        setError('Invalid token. Please log in again.');
-        toast.error('Invalid token. Please log in again.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
+        const errorMessage = err.message === 'Token expired' ? 'Token expired. Please log in again.' : 'Invalid token. Please log in again.';
+        setError(errorMessage);
+        showToastNotification(errorMessage);
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('username');
+        navigation.navigate('Admin');
+      } finally {
+        setInitialLoading(false);
       }
-    }
-  }, []);
+    };
+    initialize();
+  }, [navigation]);
 
   const fetchAdminProfile = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/profile`, {
+      const token = await AsyncStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/admin/profile`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAgencyDetails({
@@ -60,54 +99,93 @@ function Adminhome() {
         adminPhone: response.data.adminPhone || '',
       });
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Error fetching profile';
+      if (!err.response) {
+        throw new Error('Network error. Please check your internet connection.');
+      }
+      const errorMessage = err.response?.status === 401 ? 'Session expired. Please log in again.' : err.response?.data?.message || 'Error fetching profile';
       setError(errorMessage);
-      toast.error(errorMessage);
+      showToastNotification(errorMessage);
+      if (err.response?.status === 401) {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('username');
+        navigation.navigate('Admin');
+      }
     }
   };
 
   const fetchBuses = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/buses`, {
+      const token = await AsyncStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/admin/buses`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBuses(response.data);
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Error fetching buses';
+      if (!err.response) {
+        throw new Error('Network error. Please check your internet connection.');
+      }
+      const errorMessage = err.response?.status === 401 ? 'Session expired. Please log in again.' : err.response?.data?.message || 'Error fetching buses';
       setError(errorMessage);
-      toast.error(errorMessage);
+      showToastNotification(errorMessage);
+      if (err.response?.status === 401) {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('username');
+        navigation.navigate('Admin');
+      }
     }
   };
 
   const fetchBookings = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/bookings`, {
+      const token = await AsyncStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/admin/bookings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBookings(response.data);
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Error fetching bookings';
+      if (!err.response) {
+        throw new Error('Network error. Please check your internet connection.');
+      }
+      const errorMessage = err.response?.status === 401 ? 'Session expired. Please log in again.' : err.response?.data?.message || 'Error fetching bookings';
       setError(errorMessage);
-      toast.error(errorMessage);
+      showToastNotification(errorMessage);
+      if (err.response?.status === 401) {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('username');
+        navigation.navigate('Admin');
+      }
     }
   };
 
-  const handleAgencyChange = (e) => {
-    setAgencyDetails({ ...agencyDetails, [e.target.name]: e.target.value });
+  const handleAgencyChange = (name, value) => {
+    setAgencyDetails({ ...agencyDetails, [name]: value });
   };
 
-  const handleBusChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setBusDetails({
-      ...busDetails,
-      [name]: type === 'checkbox' ? checked : value,
+  const handleBusChange = (name, value) => {
+    setBusDetails({ ...busDetails, [name]: value });
+  };
+
+  const handleImagePick = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      showToastNotification('Permission to access gallery is required!');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 1,
     });
+
+    if (!result.canceled) {
+      const newUris = result.assets.map((asset) => asset.uri);
+      setImageUris([...imageUris, ...newUris].slice(0, 5));
+    }
   };
 
-  const handleImageChange = (e) => {
-    setImageFiles(Array.from(e.target.files));
+  const removeImage = (index) => {
+    setImageUris(imageUris.filter((_, i) => i !== index));
   };
 
   const validateTimeFormat = (time) => {
@@ -115,47 +193,63 @@ function Adminhome() {
     return timeRegex.test(time);
   };
 
-  const handleAgencySubmit = async (e) => {
-    e.preventDefault();
+  const handleAgencySubmit = async () => {
     setLoading(true);
     setError('');
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(agencyDetails.adminPhone)) {
+      setError('Phone number must be a 10-digit number');
+      showToastNotification('Phone number must be a 10-digit number');
+      setLoading(false);
+      return;
+    }
     try {
-      const token = localStorage.getItem('token');
+      const token = await AsyncStorage.getItem('token');
       await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/admin/update-profile`,
+        `${API_URL}/api/admin/update-profile`,
         agencyDetails,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success('Profile updated successfully');
+      showToastNotification('Profile updated successfully');
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Error updating profile';
+      if (!err.response) {
+        setError('Network error. Please check your internet connection.');
+        showToastNotification('Network error. Please check your internet connection.');
+        setLoading(false);
+        return;
+      }
+      const errorMessage = err.response?.status === 401 ? 'Session expired. Please log in again.' : err.response?.data?.message || 'Error updating profile';
       setError(errorMessage);
-      toast.error(errorMessage);
+      showToastNotification(errorMessage);
+      if (err.response?.status === 401) {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('username');
+        navigation.navigate('Admin');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleBusSubmit = async (e) => {
-    e.preventDefault();
+  const handleBusSubmit = async () => {
     setLoading(true);
     setError('');
 
     if (!validateTimeFormat(busDetails.departureTime)) {
       setError('Departure time must be in HH:MM format (e.g., 14:30)');
-      toast.error('Departure time must be in HH:MM format (e.g., 14:30)');
+      showToastNotification('Departure time must be in HH:MM format (e.g., 14:30)');
       setLoading(false);
       return;
     }
     if (!validateTimeFormat(busDetails.arrivalTime)) {
       setError('Arrival time must be in HH:MM format (e.g., 18:30)');
-      toast.error('Arrival time must be in HH:MM format (e.g., 18:30)');
+      showToastNotification('Arrival time must be in HH:MM format (e.g., 18:30)');
       setLoading(false);
       return;
     }
 
     try {
-      const token = localStorage.getItem('token');
+      const token = await AsyncStorage.getItem('token');
       const formData = new FormData();
       formData.append('busNumber', busDetails.busNumber);
       formData.append('fromAddress', busDetails.fromAddress);
@@ -163,22 +257,26 @@ function Adminhome() {
       formData.append('departureTime', busDetails.departureTime);
       formData.append('arrivalTime', busDetails.arrivalTime);
       formData.append('fare', busDetails.fare);
-      formData.append('isAC', busDetails.isAC);
-      imageFiles.forEach((file) => {
-        formData.append('busImages', file);
-      });
+      formData.append('isAC', busDetails.isAC.toString());
 
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/admin/add-bus`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-      toast.success('Bus added successfully');
+      for (let i = 0; i < imageUris.length; i++) {
+        const uri = imageUris[i];
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('busImages', {
+          uri,
+          type: 'image/jpeg',
+          name: `busImage_${i}.jpg`,
+        });
+      }
+
+      await axios.post(`${API_URL}/api/admin/add-bus`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      showToastNotification('Bus added successfully');
       fetchBuses();
       setBusDetails({
         busNumber: '',
@@ -189,11 +287,22 @@ function Adminhome() {
         fare: '',
         isAC: false,
       });
-      setImageFiles([]);
+      setImageUris([]);
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Error adding bus';
+      if (!err.response) {
+        setError('Network error. Please check your internet connection.');
+        showToastNotification('Network error. Please check your internet connection.');
+        setLoading(false);
+        return;
+      }
+      const errorMessage = err.response?.status === 401 ? 'Session expired. Please log in again.' : err.response?.data?.message || 'Error adding bus';
       setError(errorMessage);
-      toast.error(errorMessage);
+      showToastNotification(errorMessage);
+      if (err.response?.status === 401) {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('username');
+        navigation.navigate('Admin');
+      }
     } finally {
       setLoading(false);
     }
@@ -203,26 +312,49 @@ function Adminhome() {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
-      // Map the frontend status to the backend-expected status
+      const token = await AsyncStorage.getItem('token');
       const backendStatus = status === 'Completed' ? 'Done' : 'Not Done';
       const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/admin/update-booking-status/${bookingId}`,
+        `${API_URL}/api/admin/update-booking-status/${bookingId}`,
         { status: backendStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success(response.data.message);
+      showToastNotification(response.data.message);
       fetchBookings();
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Error updating booking status';
+      if (!err.response) {
+        setError('Network error. Please check your internet connection.');
+        showToastNotification('Network error. Please check your internet connection.');
+        setLoading(false);
+        return;
+      }
+      const errorMessage = err.response?.status === 401 ? 'Session expired. Please log in again.' : err.response?.data?.message || 'Error updating booking status';
       setError(errorMessage);
-      toast.error(errorMessage);
+      showToastNotification(errorMessage);
+      if (err.response?.status === 401) {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('username');
+        navigation.navigate('Admin');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Group bookings by bus
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('username');
+      showToastNotification('Logged out successfully');
+      navigation.navigate('Admin');
+    } catch (err) {
+      showToastNotification('Error logging out');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const groupedBookings = bookings.reduce((acc, booking) => {
     const busId = booking.busId._id;
     if (!acc[busId]) {
@@ -235,354 +367,449 @@ function Adminhome() {
     return acc;
   }, {});
 
-  // Handle bus click to show passenger details
   const handleBusClick = (bus) => {
     setSelectedBus(selectedBus && selectedBus._id === bus._id ? null : bus);
+    Animated.sequence([
+      Animated.timing(cardScaleAnim, {
+        toValue: 1.05,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardScaleAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
+  const showToastNotification = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchAdminProfile();
+    fetchBuses();
+    fetchBookings();
+    setError('');
+    setTimeout(() => setRefreshing(false), 1500);
+  };
+
+  useEffect(() => {
+    if (showToast) {
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showToast, slideAnim, fadeAnim]);
+
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={styles.adminHome}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2b6cb0" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <div className="admin-home">
-      <ToastContainer position="top-right" autoClose={3000} />
-      <div className="admin-layout">
-        {/* Side Image */}
-        <motion.div
-          className="side-image"
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
+    <SafeAreaView style={styles.adminHome}>
+      <KeyboardAvoidingView
+        style={styles.flexContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#2b6cb0"
+            />
+          }
         >
-          <img src={sideImage} alt="Side Illustration" />
-        </motion.div>
+          {/* Header */}
+          <Animated.View style={[styles.adminHeader, { opacity: fadeAnim }]}>
+            <Text style={styles.headerTitle}>Hello, {admin?.username || 'Admin'}</Text>
+            <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+              <Text style={styles.logoutBtnText}>Logout</Text>
+            </TouchableOpacity>
+          </Animated.View>
 
-        {/* Main Content */}
-        <div className="main-content">
-          <motion.div
-            className="admin-header"
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1>Hello, {admin?.username || 'Admin'}</h1>
-          </motion.div>
+          {/* Error Message */}
+          {error ? (
+            <Animated.View style={[styles.errorContainer, { opacity: fadeAnim }]}>
+              <Text style={styles.errorText}>{error}</Text>
+            </Animated.View>
+          ) : null}
 
-          {error && (
-            <motion.p
-              className="error"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              {error}
-            </motion.p>
-          )}
+          {/* Side Image */}
+          <Image
+            source={require('../assets/images/background.jpg')}
+            style={styles.sideImage}
+          />
 
           {/* Agency Details Form */}
-          <motion.section
-            className="admin-section"
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <h2>Update Agency Details</h2>
-            <form onSubmit={handleAgencySubmit} className="admin-form">
-              <div className="form-group">
-                <label>Agency Name:</label>
-                <input
-                  type="text"
-                  name="agencyName"
+          <View style={styles.adminSection}>
+            <Text style={styles.sectionTitle}>Update Agency Details</Text>
+            <View style={styles.adminForm}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Agency Name:</Text>
+                <TextInput
+                  style={styles.input}
                   value={agencyDetails.agencyName}
-                  onChange={handleAgencyChange}
-                  required
+                  onChangeText={(value) => handleAgencyChange('agencyName', value)}
+                  placeholder="Enter agency name"
+                  placeholderTextColor="#999"
                 />
-              </div>
-              <div className="form-group">
-                <label>Admin Name:</label>
-                <input
-                  type="text"
-                  name="adminName"
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Admin Name:</Text>
+                <TextInput
+                  style={styles.input}
                   value={agencyDetails.adminName}
-                  onChange={handleAgencyChange}
-                  required
+                  onChangeText={(value) => handleAgencyChange('adminName', value)}
+                  placeholder="Enter admin name"
+                  placeholderTextColor="#999"
                 />
-              </div>
-              <div className="form-group">
-                <label>Admin Phone:</label>
-                <input
-                  type="tel"
-                  name="adminPhone"
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Admin Phone:</Text>
+                <TextInput
+                  style={styles.input}
                   value={agencyDetails.adminPhone}
-                  onChange={handleAgencyChange}
-                  pattern="[0-9]{10}"
-                  required
+                  onChangeText={(value) => handleAgencyChange('adminPhone', value)}
+                  placeholder="Enter phone number"
+                  keyboardType="phone-pad"
+                  placeholderTextColor="#999"
                 />
-              </div>
-              <button type="submit" disabled={loading} className="submit-btn">
-                {loading ? 'Updating...' : 'Update Profile'}
-              </button>
-            </form>
-          </motion.section>
+              </View>
+              <TouchableOpacity
+                style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+                onPress={handleAgencySubmit}
+                disabled={loading}
+              >
+                <Text style={styles.submitBtnText}>
+                  {loading ? 'Updating...' : 'Update Profile'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* Add Bus Form */}
-          <motion.section
-            className="admin-section"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <h2>Add a Bus</h2>
-            <form onSubmit={handleBusSubmit} className="admin-form">
-              <div className="form-group">
-                <label>Bus Number:</label>
-                <input
-                  type="text"
-                  name="busNumber"
+          <View style={styles.adminSection}>
+            <Text style={styles.sectionTitle}>Add a Bus</Text>
+            <View style={styles.adminForm}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Bus Number:</Text>
+                <TextInput
+                  style={styles.input}
                   value={busDetails.busNumber}
-                  onChange={handleBusChange}
-                  required
+                  onChangeText={(value) => handleBusChange('busNumber', value)}
+                  placeholder="Enter bus number"
+                  placeholderTextColor="#999"
                 />
-              </div>
-              <div className="form-group">
-                <label>Departure Address:</label>
-                <input
-                  type="text"
-                  name="fromAddress"
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Departure Address:</Text>
+                <TextInput
+                  style={styles.input}
                   value={busDetails.fromAddress}
-                  onChange={handleBusChange}
-                  required
+                  onChangeText={(value) => handleBusChange('fromAddress', value)}
+                  placeholder="Enter departure address"
+                  placeholderTextColor="#999"
                 />
-              </div>
-              <div className="form-group">
-                <label>Destination Address:</label>
-                <input
-                  type="text"
-                  name="toAddress"
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Destination Address:</Text>
+                <TextInput
+                  style={styles.input}
                   value={busDetails.toAddress}
-                  onChange={handleBusChange}
-                  required
+                  onChangeText={(value) => handleBusChange('toAddress', value)}
+                  placeholder="Enter destination address"
+                  placeholderTextColor="#999"
                 />
-              </div>
-              <div className="form-group">
-                <label>Departure Time (HH:MM):</label>
-                <input
-                  type="text"
-                  name="departureTime"
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Departure Time (HH:MM):</Text>
+                <TextInput
+                  style={styles.input}
                   value={busDetails.departureTime}
-                  onChange={handleBusChange}
+                  onChangeText={(value) => handleBusChange('departureTime', value)}
                   placeholder="e.g., 14:30"
-                  required
+                  placeholderTextColor="#999"
                 />
-              </div>
-              <div className="form-group">
-                <label>Arrival Time (HH:MM):</label>
-                <input
-                  type="text"
-                  name="arrivalTime"
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Arrival Time (HH:MM):</Text>
+                <TextInput
+                  style={styles.input}
                   value={busDetails.arrivalTime}
-                  onChange={handleBusChange}
+                  onChangeText={(value) => handleBusChange('arrivalTime', value)}
                   placeholder="e.g., 18:30"
-                  required
+                  placeholderTextColor="#999"
                 />
-              </div>
-              <div className="form-group">
-                <label>Fare per Seat (₹):</label>
-                <input
-                  type="number"
-                  name="fare"
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Fare per Seat (₹):</Text>
+                <TextInput
+                  style={styles.input}
                   value={busDetails.fare}
-                  onChange={handleBusChange}
-                  min="1"
-                  required
+                  onChangeText={(value) => handleBusChange('fare', value)}
+                  keyboardType="numeric"
+                  placeholder="Enter fare"
+                  placeholderTextColor="#999"
                 />
-              </div>
-              <div className="form-group checkbox-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    name="isAC"
-                    checked={busDetails.isAC}
-                    onChange={handleBusChange}
-                  />
-                  Is AC Bus?
-                </label>
-              </div>
-              <div className="form-group">
-                <label>Upload Bus Images (up to 5):</label>
-                <input
-                  type="file"
-                  name="busImages"
-                  multiple
-                  onChange={handleImageChange}
-                  accept="image/*"
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Is AC Bus?</Text>
+                <Switch
+                  value={busDetails.isAC}
+                  onValueChange={(value) => handleBusChange('isAC', value)}
+                  trackColor={{ false: '#767577', true: '#2b6cb0' }}
+                  thumbColor={busDetails.isAC ? '#fff' : '#f4f3f4'}
                 />
-              </div>
-              <button type="submit" disabled={loading} className="submit-btn">
-                {loading ? 'Adding...' : 'Add Bus'}
-              </button>
-            </form>
-          </motion.section>
+              </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Upload Bus Images (up to 5):</Text>
+                <TouchableOpacity style={styles.imagePickerBtn} onPress={handleImagePick}>
+                  <Text style={styles.imagePickerText}>Select Images</Text>
+                </TouchableOpacity>
+                <View style={styles.imagePreviewContainer}>
+                  {imageUris.map((uri, index) => (
+                    <View key={index} style={styles.imagePreviewWrapper}>
+                      <Image source={{ uri }} style={styles.imagePreview} />
+                      <TouchableOpacity
+                        style={styles.removeImageBtn}
+                        onPress={() => removeImage(index)}
+                      >
+                        <Text style={styles.removeImageText}>X</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+                onPress={handleBusSubmit}
+                disabled={loading}
+              >
+                <Text style={styles.submitBtnText}>
+                  {loading ? 'Adding...' : 'Add Bus'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* List of Buses */}
-          <motion.section
-            className="admin-section"
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
-          >
-            <h2>Your Buses</h2>
+          <View style={styles.adminSection}>
+            <Text style={styles.sectionTitle}>Your Buses</Text>
             {buses.length === 0 ? (
-              <p>No buses added yet.</p>
+              <Text style={styles.noDataText}>No buses added yet.</Text>
             ) : (
-              <div className="card-container">
+              <View style={styles.cardContainer}>
                 {buses.map((bus) => (
-                  <motion.div
+                  <TouchableOpacity
                     key={bus._id}
-                    className={`card bus-card ${selectedBus && selectedBus._id === bus._id ? 'selected' : ''}`}
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                    onClick={() => handleBusClick(bus)}
+                    onPress={() => handleBusClick(bus)}
+                    style={styles.cardWrapper}
                   >
-                    <div className="card-header">
-                      <h3>{bus.agencyName} - {bus.busNumber}</h3>
-                      <span className="toggle-icon">
-                        {selectedBus && selectedBus._id === bus._id ? '▼' : '▶'}
-                      </span>
-                    </div>
-                    <p><span className="icon">🛤️</span> Route: {bus.fromAddress} to {bus.toAddress}</p>
-                    <p><span className="icon">⏰</span> Departure: {bus.departureTime} | Arrival: {bus.arrivalTime}</p>
-                    <p><span className="icon">💵</span> Fare: ₹{bus.fare} | Type: {bus.isAC ? 'AC' : 'Non-AC'}</p>
-                    <p><span className="icon">💺</span> Seats: 1-50</p>
+                    <Animated.View
+                      style={[
+                        styles.card,
+                        styles.busCard,
+                        selectedBus && selectedBus._id === bus._id && styles.busCardSelected,
+                        { transform: [{ scale: cardScaleAnim }] },
+                      ]}
+                    >
+                      <View style={styles.cardHeader}>
+                        <Text style={styles.cardHeaderTitle}>
+                          {bus.agencyName} - {bus.busNumber}
+                        </Text>
+                        <Text style={styles.toggleIcon}>
+                          {selectedBus && selectedBus._id === bus._id ? '▼' : '▶'}
+                        </Text>
+                      </View>
+                      <Text style={styles.cardText}>🛤️ Route: {bus.fromAddress} to {bus.toAddress}</Text>
+                      <Text style={styles.cardText}>⏰ Departure: {bus.departureTime} | Arrival: {bus.arrivalTime}</Text>
+                      <Text style={styles.cardText}>💵 Fare: ₹{bus.fare} | Type: {bus.isAC ? 'AC' : 'Non-AC'}</Text>
+                      <Text style={styles.cardText}>💺 Seats: 1-50</Text>
 
-                    {/* Passenger Details for Selected Bus */}
-                    {selectedBus && selectedBus._id === bus._id && (
-                      <motion.div
-                        className="passenger-details"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <h4>Passenger Details</h4>
-                        {groupedBookings[bus._id]?.bookings?.length > 0 ? (
-                          <div className="passenger-list">
-                            {groupedBookings[bus._id].bookings.map((booking) => (
-                              <div key={booking._id} className="passenger-card">
-                                <p><strong>User:</strong> {booking.userId?.username || 'Unknown User'}</p>
-                                <p><strong>Passengers:</strong></p>
-                                <ul>
+                      {/* Passenger Details */}
+                      {selectedBus && selectedBus._id === bus._id && (
+                        <Animated.View style={[styles.passengerDetails, { opacity: fadeAnim }]}>
+                          <Text style={styles.passengerDetailsTitle}>Passenger Details</Text>
+                          {groupedBookings[bus._id]?.bookings?.length > 0 ? (
+                            <View style={styles.passengerList}>
+                              {groupedBookings[bus._id].bookings.map((booking) => (
+                                <View key={booking._id} style={styles.passengerCard}>
+                                  <Text style={styles.passengerText}>
+                                    <Text style={styles.passengerLabel}>User:</Text> {booking.userId?.username || 'Unknown User'}
+                                  </Text>
+                                  <Text style={styles.passengerText}>
+                                    <Text style={styles.passengerLabel}>Passengers:</Text>
+                                  </Text>
                                   {booking.userDetails.passengers.map((passenger, index) => (
-                                    <li key={index}>
-                                      {passenger.name} (Age: {passenger.age}, Gender: {passenger.gender})
-                                    </li>
+                                    <Text key={index} style={styles.passengerItem}>
+                                      - {passenger.name} (Age: {passenger.age}, Gender: {passenger.gender})
+                                    </Text>
                                   ))}
-                                </ul>
-                                <p><strong>Seats:</strong> {booking.seatsBooked.map((s) => s.seatNumber).join(', ')}</p>
-                                <p><strong>Travel Date:</strong> {new Date(booking.travelDate).toLocaleDateString()}</p>
-                                <p><strong>Total Fare:</strong> ₹{booking.totalFare}</p>
-                                <p><strong>Status:</strong> {booking.status}</p>
-                                {booking.status === 'Confirmed' && (
-                                  <div className="action-buttons">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation(); // Prevent card click
-                                        handleUpdateBookingStatus(booking._id, 'Completed');
-                                      }}
-                                      disabled={loading}
-                                      className="action-btn complete-btn"
-                                    >
-                                      {loading ? 'Processing...' : 'Completed'}
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation(); // Prevent card click
-                                        handleUpdateBookingStatus(booking._id, 'Missed');
-                                      }}
-                                      disabled={loading}
-                                      className="action-btn missed-btn"
-                                    >
-                                      {loading ? 'Processing...' : 'Missed'}
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p>No passengers booked for this bus yet.</p>
-                        )}
-                      </motion.div>
-                    )}
-                  </motion.div>
+                                  <Text style={styles.passengerText}>
+                                    <Text style={styles.passengerLabel}>Seats:</Text> {booking.seatsBooked.map((s) => s.seatNumber).join(', ')}
+                                  </Text>
+                                  <Text style={styles.passengerText}>
+                                    <Text style={styles.passengerLabel}>Travel Date:</Text> {new Date(booking.travelDate).toLocaleDateString()}
+                                  </Text>
+                                  <Text style={styles.passengerText}>
+                                    <Text style={styles.passengerLabel}>Total Fare:</Text> ₹{booking.totalFare}
+                                  </Text>
+                                  <Text style={styles.passengerText}>
+                                    <Text style={styles.passengerLabel}>Status:</Text> {booking.status}
+                                  </Text>
+                                  {booking.status === 'Confirmed' && (
+                                    <View style={styles.actionButtons}>
+                                      <TouchableOpacity
+                                        style={[styles.actionBtn, styles.completeBtn]}
+                                        onPress={() => handleUpdateBookingStatus(booking._id, 'Completed')}
+                                        disabled={loading}
+                                      >
+                                        <Text style={styles.actionBtnText}>
+                                          {loading ? 'Processing...' : 'Completed'}
+                                        </Text>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity
+                                        style={[styles.actionBtn, styles.missedBtn]}
+                                        onPress={() => handleUpdateBookingStatus(booking._id, 'Missed')}
+                                        disabled={loading}
+                                      >
+                                        <Text style={styles.actionBtnText}>
+                                          {loading ? 'Processing...' : 'Missed'}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    </View>
+                                  )}
+                                </View>
+                              ))}
+                            </View>
+                          ) : (
+                            <Text style={styles.noDataText}>No passengers booked for this bus yet.</Text>
+                          )}
+                        </Animated.View>
+                      )}
+                    </Animated.View>
+                  </TouchableOpacity>
                 ))}
-              </div>
+              </View>
             )}
-          </motion.section>
+          </View>
 
           {/* Grouped Bookings by Bus */}
-          <motion.section
-            className="admin-section"
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.8 }}
-          >
-            <h2>All Bookings for Your Agency</h2>
+          <View style={styles.adminSection}>
+            <Text style={styles.sectionTitle}>All Bookings for Your Agency</Text>
             {Object.keys(groupedBookings).length === 0 ? (
-              <p>No bookings yet.</p>
+              <Text style={styles.noDataText}>No bookings yet.</Text>
             ) : (
               Object.values(groupedBookings).map(({ bus, bookings }) => (
-                <div key={bus._id} className="bus-bookings">
-                  <h3>
+                <View key={bus._id} style={styles.busBookings}>
+                  <Text style={styles.busBookingsTitle}>
                     {bus.agencyName} ({bus.busNumber}) {bus.isAC ? '(AC)' : '(Non-AC)'}
-                  </h3>
-                  <div className="card-container">
+                  </Text>
+                  <View style={styles.cardContainer}>
                     {bookings.map((booking) => (
-                      <motion.div
+                      <Animated.View
                         key={booking._id}
-                        className="card booking-card"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.3 }}
+                        style={[styles.card, styles.bookingCard, { opacity: fadeAnim }]}
                       >
-                        <p><span className="icon">👤</span> <strong>User:</strong> {booking.userId?.username || 'Unknown User'}</p>
-                        <p><span className="icon">👥</span> <strong>Passengers:</strong></p>
-                        <ul>
-                          {booking.userDetails.passengers.map((passenger, index) => (
-                            <li key={index}>
-                              {passenger.name} (Age: {passenger.age}, Gender: {passenger.gender})
-                            </li>
-                          ))}
-                        </ul>
-                        <p><span className="icon">💺</span> <strong>Seats:</strong> {booking.seatsBooked.map((s) => s.seatNumber).join(', ')}</p>
-                        <p><span className="icon">📅</span> <strong>Travel Date:</strong> {new Date(booking.travelDate).toLocaleDateString()}</p>
-                        <p><span className="icon">💵</span> <strong>Total Fare:</strong> ₹{booking.totalFare}</p>
-                        <p><span className="icon">📊</span> <strong>Status:</strong> {booking.status}</p>
+                        <Text style={styles.cardText}>
+                          <Text style={styles.cardLabel}>👤 User:</Text> {booking.userId?.username || 'Unknown User'}
+                        </Text>
+                        <Text style={styles.cardText}>
+                          <Text style={styles.cardLabel}>👥 Passengers:</Text>
+                        </Text>
+                        {booking.userDetails.passengers.map((passenger, index) => (
+                          <Text key={index} style={styles.passengerItem}>
+                            - {passenger.name} (Age: {passenger.age}, Gender: {passenger.gender})
+                          </Text>
+                        ))}
+                        <Text style={styles.cardText}>
+                          <Text style={styles.cardLabel}>💺 Seats:</Text> {booking.seatsBooked.map((s) => s.seatNumber).join(', ')}
+                        </Text>
+                        <Text style={styles.cardText}>
+                          <Text style={styles.cardLabel}>📅 Travel Date:</Text> {new Date(booking.travelDate).toLocaleDateString()}
+                        </Text>
+                        <Text style={styles.cardText}>
+                          <Text style={styles.cardLabel}>💵 Total Fare:</Text> ₹{booking.totalFare}
+                        </Text>
+                        <Text style={styles.cardText}>
+                          <Text style={styles.cardLabel}>📊 Status:</Text> {booking.status}
+                        </Text>
                         {booking.status === 'Confirmed' && (
-                          <div className="action-buttons">
-                            <button
-                              onClick={() => handleUpdateBookingStatus(booking._id, 'Completed')}
+                          <View style={styles.actionButtons}>
+                            <TouchableOpacity
+                              style={[styles.actionBtn, styles.completeBtn]}
+                              onPress={() => handleUpdateBookingStatus(booking._id, 'Completed')}
                               disabled={loading}
-                              className="action-btn complete-btn"
                             >
-                              {loading ? 'Processing...' : 'Completed'}
-                            </button>
-                            <button
-                              onClick={() => handleUpdateBookingStatus(booking._id, 'Missed')}
+                              <Text style={styles.actionBtnText}>
+                                {loading ? 'Processing...' : 'Completed'}
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[styles.actionBtn, styles.missedBtn]}
+                              onPress={() => handleUpdateBookingStatus(booking._id, 'Missed')}
                               disabled={loading}
-                              className="action-btn missed-btn"
                             >
-                              {loading ? 'Processing...' : 'Missed'}
-                            </button>
-                          </div>
+                              <Text style={styles.actionBtnText}>
+                                {loading ? 'Processing...' : 'Missed'}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
                         )}
-                      </motion.div>
+                      </Animated.View>
                     ))}
-                  </div>
-                </div>
+                  </View>
+                </View>
               ))
             )}
-          </motion.section>
-        </div>
-      </div>
-    </div>
+          </View>
+        </ScrollView>
+
+        {/* Toast Notification */}
+        {showToast && (
+          <Animated.View
+            style={[
+              styles.authToast,
+              {
+                transform: [{ translateX: slideAnim }],
+                opacity: fadeAnim,
+              },
+            ]}
+          >
+            <Text style={styles.authToastText}>{toastMessage}</Text>
+          </Animated.View>
+        )}
+
+        {/* Loader */}
+        {loading && (
+          <View style={styles.authLoader}>
+            <ActivityIndicator size="large" color="#2b6cb0" />
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
-}
+};
 
 export default Adminhome;
