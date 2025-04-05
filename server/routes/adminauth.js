@@ -577,6 +577,7 @@ const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
 const twilio = require('twilio');
+const { v4: uuidv4 } = require('uuid'); // Added for unique temporary usernames
 
 // Environment variables
 const {
@@ -640,9 +641,9 @@ router.post('/send-otp', async (req, res) => {
   try {
     let user = await User.findOne({ email, phone, role });
     if (!user) {
-      // Use the provided username if available, or generate a temporary one to avoid null
-      const safeUsername = username && username.trim().length >= 3 ? username.trim() : `temp_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-      user = new User({ email, phone, role, username: safeUsername });
+      // Use a unique temporary username based on email and UUID
+      const tempUsername = `temp_${email.split('@')[0]}_${uuidv4().split('-')[0]}`;
+      user = new User({ email, phone, role, username: tempUsername });
     } else {
       // Update username if provided and valid
       if (username && username.trim().length >= 3) {
@@ -709,7 +710,7 @@ router.post('/admin-signup', async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email, phone, role });
+    let user = await User.findOne({ email, phone, role });
     if (!user) {
       return res.status(400).json({ message: 'User not found for OTP verification' });
     }
@@ -718,15 +719,19 @@ router.post('/admin-signup', async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired OTP' });
     }
 
+    // Check for existing username, but allow overwrite if it's a temp username or no password
     const existingUser = await User.findOne({ username });
-    if (existingUser) {
+    if (existingUser && existingUser.password) {
       return res.status(400).json({ message: 'Username already exists' });
+    } else if (existingUser && !existingUser.password) {
+      // Overwrite the existing temp user
+      user = existingUser;
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    user.username = username;
+    user.username = username.trim();
     user.password = hashedPassword;
     user.otp = null;
     user.otpExpires = null;
@@ -757,7 +762,7 @@ router.post('/admin-login', async (req, res) => {
     }
 
     if (!user.password) {
-      return res.status(400).json({ message: 'User not fully registered. Please complete signup.' });
+      return res.status(400).json({ message: 'User not fully registered. Please complete signup with password.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
